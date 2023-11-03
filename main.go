@@ -15,11 +15,9 @@ import (
 )
 
 type User struct {
-	
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
-
 }
 
 type Shoe struct {
@@ -76,6 +74,7 @@ func main() {
 	protectedRoutes.HandleFunc("/create", CreateShoe).Methods("POST")
 	protectedRoutes.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
 	protectedRoutes.HandleFunc("/delete/{id}", DeleteShoe).Methods("DELETE")
+	protectedRoutes.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
 
 	r.HandleFunc("/register", registerHandler).Methods("POST")
 	r.HandleFunc("/login", loginHandler).Methods("POST")
@@ -347,4 +346,22 @@ func DeleteShoe(w http.ResponseWriter, r *http.Request) {
 	// If the delete is successful, return a success message
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Shoe deleted successfully"))
+}
+
+// Handler function to view the user's profile based on ID
+func ViewProfile(w http.ResponseWriter, r *http.Request) {
+	// Get the user ID from the request parameters
+	params := mux.Vars(r)
+	userID := params["id"]
+
+	// Query the database to get the user's name and email based on the provided ID
+	var user User
+	err := db.QueryRow("SELECT username, email FROM users WHERE id = ?", userID).Scan(&user.Username, &user.Email)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	// Encode the user profile into JSON and send the response
+	json.NewEncoder(w).Encode(user)
 }
