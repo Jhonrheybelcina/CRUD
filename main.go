@@ -4,14 +4,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	// "github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
+
+	// "github.com/gin-contrib/cors"
+	// "github.com/gin-gonic/gin"
+	"github.com/rs/cors"
 )
 
 type User struct {
@@ -21,68 +27,89 @@ type User struct {
 }
 
 type Shoe struct {
-	ID    string  `json:"id,omitempty"`
-	Brand string  `json:"brand,omitempty"`
-	Model string  `json:"model,omitempty"`
-	Size  int     `json:"size,omitempty"`
-	Color string  `json:"color,omitempty"`
-	Price float64 `json:"price,omitempty"`
+	ID        string  `json:"id,omitempty"`
+	Brand     string  `json:"brand,omitempty"`
+	Model     string  `json:"model,omitempty"`
+	Size      int     `json:"size,omitempty"`
+	Color     string  `json:"color,omitempty"`
+	Price     float64 `json:"price,omitempty"`
 }
+
+
+
 
 var db *sql.DB
 
 func main() {
-	var err error
-	db, err = sql.Open("mysql", "root:Jhonrhey#123@tcp(localhost:3306)/gocrud")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+    var err error
+    db, err = sql.Open("mysql", "root:Jhonrhey#123@tcp(localhost:3306)/gocrud")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer db.Close()
 
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		username VARCHAR(255) NOT NULL,
-		email VARCHAR(255) NOT NULL,
-		password VARCHAR(255) NOT NULL
-	)`)
-	if err != nil {
-		log.Fatal(err)
-	}
+    _, err = db.Exec(`CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        password VARCHAR(255) NOT NULL
+    )`)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// Create the 'shoes' table if it does not exist
-	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS shoes (
-		id INT AUTO_INCREMENT PRIMARY KEY,
-		brand VARCHAR(255),
-		model VARCHAR(255),
-		size INT,
-		color VARCHAR(255),
-		price DECIMAL(10, 2)
-	)`)
-	if err != nil {
-		panic(err.Error())
-	}
+    // Create the 'shoes' table if it does not exist
+    _, err = db.Exec(`CREATE TABLE IF NOT EXISTS shoes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        brand VARCHAR(255),
+        model VARCHAR(255),
+        size INT,
+        color VARCHAR(255),
+        price DECIMAL(10, 2)
+    )`)
+    if err != nil {
+        panic(err.Error())
+    }
 
-	r := mux.NewRouter()
+    r := mux.NewRouter()
 
-	// Handle protected routes with authenticationMiddleware
-	protectedRoutes := r.PathPrefix("/protected").Subrouter()
-	protectedRoutes.Use(authenticationMiddleware)
+    // CORS middleware
+    corsHandler := cors.New(cors.Options{
+        AllowedOrigins:   []string{"http://localhost:3000"},
+        AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+        AllowedHeaders:   []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"},
+        AllowCredentials: true,
+    })
 
-	// Protected routes
-	protectedRoutes.HandleFunc("/showAll", GetShoes).Methods("GET")
-	protectedRoutes.HandleFunc("/show/{id}", GetShoe).Methods("GET")
-	protectedRoutes.HandleFunc("/create", CreateShoe).Methods("POST")
-	protectedRoutes.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
-	protectedRoutes.HandleFunc("/delete/{id}", DeleteShoe).Methods("DELETE")
-	protectedRoutes.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
+    // Apply CORS middleware to all routes
+    handler := corsHandler.Handler(r)
 
-	r.HandleFunc("/register", registerHandler).Methods("POST")
-	r.HandleFunc("/login", loginHandler).Methods("POST")
-	r.HandleFunc("/forgot-password", forgotPasswordHandler).Methods("POST")
-	r.HandleFunc("/logout", logoutHandler).Methods("POST")
+    // Handle protected routes with authenticationMiddleware
+    protectedRoutes := r.PathPrefix("/protected").Subrouter()
+    protectedRoutes.Use(authenticationMiddleware)
 
-	http.Handle("/", r)
-	http.ListenAndServe(":8080", nil)
+    // Protected routes
+    // protectedRoutes.HandleFunc("/showAll", GetShoes).Methods("GET")
+    // protectedRoutes.HandleFunc("/show/{id}", GetShoe).Methods("GET")
+    // protectedRoutes.HandleFunc("/create", CreateShoe).Methods("POST")
+    // protectedRoutes.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
+    // protectedRoutes.HandleFunc("/delete/{id}", DeleteShoe).Methods("DELETE")
+    protectedRoutes.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
+
+	//Public routes
+	r.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
+	r.HandleFunc("/delete/{id}", DeleteShoe).Methods("DELETE")
+	r.HandleFunc("/create", CreateShoe).Methods("POST")
+    r.HandleFunc("/showAll", GetShoes).Methods("GET")
+    r.HandleFunc("/show/{id}", GetShoe).Methods("GET")
+    r.HandleFunc("/register", registerHandler).Methods("POST")
+    r.HandleFunc("/login", loginHandler).Methods("POST")
+    r.HandleFunc("/forgot-password", forgotPasswordHandler).Methods("POST")
+    r.HandleFunc("/logout", logoutHandler).Methods("POST")
+
+    // Use the CORS-wrapped handler
+    http.Handle("/", handler)
+    http.ListenAndServe(":8080", nil)
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +150,9 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 type LoginForm struct {
 	Username string `json:"username"`
-	Password string `json:"password"`
+	Message  string `json:"message"`
+	Email string `json: email`
+	Password string `json: password`
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -133,11 +162,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	username := loginForm.Username
+	email := loginForm.Email
 	password := loginForm.Password
 
 	var storedPasswordHash string
-	err = db.QueryRow("SELECT password FROM users WHERE username = ?", username).Scan(&storedPasswordHash)
+	var username string
+	err = db.QueryRow("SELECT username, password FROM users WHERE email = ?", email).Scan(&username, &storedPasswordHash)
 	if err != nil {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
@@ -153,14 +183,24 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// Set a session cookie upon successful login
 	sessionCookie := http.Cookie{
 		Name:     "session",
-		Value:    username, // You can store user ID or other unique identifier here
-		HttpOnly: true,     // Cookie cannot be accessed via JavaScript
+		Value:    email, // You can store user ID or other unique identifier here
+		HttpOnly: true,  // Cookie cannot be accessed via JavaScript
 	}
 	http.SetCookie(w, &sessionCookie)
 
+	response := struct {
+		Username string `json:"username"`
+		Message  string `json:"message"`
+	}{
+		Username: username,
+		Message:  "Login successful",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Login successful")
+	json.NewEncoder(w).Encode(response)
 }
+
 
 func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	var user struct {
@@ -231,42 +271,60 @@ func authenticationMiddleware(next http.Handler) http.Handler {
 var shoes []Shoe
 
 func GetShoes(w http.ResponseWriter, r *http.Request) {
-	// Retrieve shoes from the database
-	rows, err := db.Query("SELECT * FROM shoes")
-	if err != nil {
-		panic(err.Error())
-	}
-	defer rows.Close()
+    // Query all shoes from the database
+    rows, err := db.Query("SELECT * FROM shoes")
+    if err != nil {
+        // Handle the error
+        log.Println("Error getting shoes from database:", err)
+        http.Error(w, "Failed to retrieve shoes", http.StatusInternalServerError)
+        return
+    }
+    defer rows.Close()
 
-	shoes := []Shoe{} // Create a new slice to store the retrieved shoes
+    // Create a slice to hold the shoes
+    var shoes []Shoe
 
-	for rows.Next() {
-		var shoe Shoe
-		err := rows.Scan(&shoe.ID, &shoe.Brand, &shoe.Model, &shoe.Size, &shoe.Color, &shoe.Price)
-		if err != nil {
-			panic(err.Error())
-		}
-		shoes = append(shoes, shoe)
-	}
+    // Iterate over the rows and populate the shoes slice
+    for rows.Next() {
+        var shoe Shoe
+        if err := rows.Scan(&shoe.ID, &shoe.Brand, &shoe.Model, &shoe.Size, &shoe.Color, &shoe.Price); err != nil {
+            // Handle the error
+            log.Println("Error scanning shoe from row:", err)
+            http.Error(w, "Failed to retrieve shoes", http.StatusInternalServerError)
+            return
+        }
+        shoes = append(shoes, shoe)
+    }
 
-	if len(shoes) == 0 {
-		// If no shoes are found, display a custom message
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("No Shoes Available"))
-		return
-	}
+    // Check for errors from iterating over rows
+    if err := rows.Err(); err != nil {
+        log.Println("Error iterating over rows:", err)
+        http.Error(w, "Failed to retrieve shoes", http.StatusInternalServerError)
+        return
+    }
 
-	// Encode the shoes into JSON and send the response
-	json.NewEncoder(w).Encode(shoes)
+    // Encode the shoes slice into JSON and send the response
+    json.NewEncoder(w).Encode(shoes)
 }
+
 
 func GetShoe(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	shoeID := params["id"]
 
-	var shoe Shoe
-	err := db.QueryRow("SELECT * FROM shoes WHERE id = ?", shoeID).Scan(&shoe.ID, &shoe.Brand, &shoe.Model, &shoe.Size, &shoe.Color, &shoe.Price)
+	// Convert shoeID to integer
+	shoeIDInt, err := strconv.Atoi(shoeID)
 	if err != nil {
+		// Handle the error, e.g., return a bad request response
+		http.Error(w, "Invalid shoe ID", http.StatusBadRequest)
+		return
+	}
+
+	var shoe Shoe
+	err = db.QueryRow("SELECT * FROM shoes WHERE id = ?", shoeIDInt).Scan(&shoe.ID, &shoe.Brand, &shoe.Model, &shoe.Size, &shoe.Color, &shoe.Price)
+	if err != nil {
+		// Log the error for debugging
+		log.Println("Error getting shoe from database:", err)
 		// If no matching shoe is found, return a 404 Not Found response
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("Shoe not found"))
@@ -277,28 +335,66 @@ func GetShoe(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(shoe)
 }
 
+
+
 func CreateShoe(w http.ResponseWriter, r *http.Request) {
-	var shoe Shoe
-	err := json.NewDecoder(r.Body).Decode(&shoe)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+    // Read the request body
+    body, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "Error reading request body", http.StatusInternalServerError)
+        return
+    }
+    defer r.Body.Close()
 
-	// Insert shoe data into the database
-	_, err = db.Exec("INSERT INTO shoes (brand, model, size, color, price) VALUES (?, ?, ?, ?, ?)",
-		shoe.Brand, shoe.Model, shoe.Size, shoe.Color, shoe.Price)
-	if err != nil {
-		// If insertion fails, return a custom error message
-		w.WriteHeader(http.StatusInternalServerError) // Internal Server Error
-		w.Write([]byte("Failed to add shoe"))
-		return
-	}
+    // Create an empty shoe instance to decode the JSON or form data into
+    var newShoe Shoe
 
-	// If insertion succeeds, return a success message
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Shoe added successfully"))
+    // Try to unmarshal the request body as JSON
+    if err := json.Unmarshal(body, &newShoe); err != nil {
+        // If it's not JSON, try to parse it as form data
+        if err := r.ParseForm(); err != nil {
+            http.Error(w, "Invalid request body", http.StatusBadRequest)
+            return
+        }
+
+        // Parse form fields
+        brand := r.FormValue("brand")
+        model := r.FormValue("model")
+        size, _ := strconv.Atoi(r.FormValue("size"))
+        color := r.FormValue("color")
+        price, _ := strconv.ParseFloat(r.FormValue("price"), 64)
+
+        // Set values in the shoe instance
+        newShoe = Shoe{
+            Brand: brand,
+            Model: model,
+            Size:  size,
+            Color: color,
+            Price: price,
+        }
+    }
+
+    // Optional: Perform validation on the form fields or the newShoe instance
+
+    // Insert shoe data into the database
+    _, err = db.Exec("INSERT INTO shoes (brand, model, size, color, price) VALUES (?, ?, ?, ?, ?)",
+        newShoe.Brand, newShoe.Model, newShoe.Size, newShoe.Color, newShoe.Price)
+    if err != nil {
+        // Handle the error
+        log.Println("Error inserting into database:", err)
+        http.Error(w, "Failed to add shoe", http.StatusInternalServerError)
+        return
+    }
+
+    // If insertion succeeds, return a success message
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte("Shoe added successfully"))
 }
+
+
+
+
+
 
 func UpdateShoe(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -309,9 +405,36 @@ func UpdateShoe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the existing shoe data from the database
+	var existingShoe Shoe
+	err = db.QueryRow("SELECT * FROM shoes WHERE id = ?", params["id"]).Scan(&existingShoe.ID, &existingShoe.Brand, &existingShoe.Model, &existingShoe.Size, &existingShoe.Color, &existingShoe.Price)
+	if err != nil {
+		// Handle the error, e.g., return a 404 Not Found response
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Shoe not found"))
+		return
+	}
+
+	// Update only the fields that are provided in the request
+	if updatedShoe.Brand != "" {
+		existingShoe.Brand = updatedShoe.Brand
+	}
+	if updatedShoe.Model != "" {
+		existingShoe.Model = updatedShoe.Model
+	}
+	if updatedShoe.Size != 0 {
+		existingShoe.Size = updatedShoe.Size
+	}
+	if updatedShoe.Color != "" {
+		existingShoe.Color = updatedShoe.Color
+	}
+	if updatedShoe.Price != 0 {
+		existingShoe.Price = updatedShoe.Price
+	}
+
 	// Update shoe data in the database
 	_, err = db.Exec("UPDATE shoes SET brand=?, model=?, size=?, color=?, price=? WHERE id=?",
-		updatedShoe.Brand, updatedShoe.Model, updatedShoe.Size, updatedShoe.Color, updatedShoe.Price, params["id"])
+		existingShoe.Brand, existingShoe.Model, existingShoe.Size, existingShoe.Color, existingShoe.Price, params["id"])
 	if err != nil {
 		// If the update fails, return a custom error message
 		w.WriteHeader(http.StatusInternalServerError) // Internal Server Error
@@ -319,18 +442,11 @@ func UpdateShoe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update the local slice (optional)
-	for index, shoe := range shoes {
-		if shoe.ID == params["id"] {
-			shoes[index] = updatedShoe
-			break
-		}
-	}
-
 	// If the update is successful, return a success message
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("The information is updated successfully"))
 }
+
 
 func DeleteShoe(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
