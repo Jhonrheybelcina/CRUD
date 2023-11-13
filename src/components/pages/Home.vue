@@ -330,36 +330,9 @@ export default {
       window.location.href = '#/login'; // Assuming the login page path is '/login'
     }
 
-    // Now, initialize your Owl Carousel after ensuring the user is logged in
-    this.initOwlCarousel();
   },
   methods: {
-    initOwlCarousel() {
-      // eslint-disable-next-line no-undef
-      $(".client_owl-carousel").owlCarousel({
-        loop: true,
-        margin: 0,
-        dots: false,
-        nav: true,
-        navText: [
-          '<i class="fa fa-angle-left" aria-hidden="true"></i>',
-          '<i class="fa fa-angle-right" aria-hidden="true"></i>',
-        ],
-        autoplay: true,
-        autoplayHoverPause: true,
-        responsive: {
-          0: {
-            items: 1,
-          },
-          768: {
-            items: 2,
-          },
-          1000: {
-            items: 2,
-          },
-        },
-      });
-    },
+
   },
 };
 </script>

@@ -126,7 +126,7 @@ export default {
                 console.log('Login successful:', response.data);
 
                 // Store the session cookie in localStorage
-                document.cookie = response.headers['set-cookie'];
+                // document.cookie = response.headers['set-cookie'];
 
                 // Store user email and username in localStorage (optional)
                 localStorage.setItem('email', this.email);
