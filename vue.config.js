@@ -2,6 +2,8 @@
 // module.exports = defineConfig({
 //   transpileDependencies: true
 // })
-export const publicPath = process.env.NODE_ENV === 'production'
-  ? '/CRUD/'
-  : '/';
+module.exports = {
+  publicPath: process.env.NODE_ENV === 'production'
+    ? '/CRUD/'
+    : '/'
+};

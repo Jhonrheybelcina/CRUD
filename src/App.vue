@@ -6,19 +6,19 @@ import Register from './components/pages/Register.vue'
 import Nav from './components/header/Nav.vue'
 import About from './components/pages/About.vue'
 import Contact from './components/pages/Contact.vue'
-import Landing from './components/pages/Landing.vue'
+// import Landing from './components/pages/Landing.vue'
 import Profile from './components/pages/Profile.vue'
 import Shoe from './components/pages/Shoe.vue'
 import Footer from './components/footer/Footer.vue'
 import Forgotpassword from './components/pages/Forgotpassword.vue'
 
 const routes = {
-  '/': Landing,
+  // '/': Landing,
   '/login': Login,
   '/register': Register,
   '/about': About,
   '/contact': Contact,
-  '/home': Home,
+  '/': Home,
   '/profile': Profile,
   '/shoe': Shoe,
   '/forgot-password': Forgotpassword

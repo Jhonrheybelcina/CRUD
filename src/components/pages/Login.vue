@@ -100,63 +100,63 @@
 import axios from 'axios';
 
 export default {
-    // eslint-disable-next-line vue/multi-word-component-names
-    name: 'Login',
-    data() {
-        return {
-            email: '',
-            password: ''
-        };
-    },
-    methods: {
+  // eslint-disable-next-line vue/multi-word-component-names
+  name: 'Login',
+  data() {
+    return {
+      email: '',
+      password: ''
+    };
+  },
+  methods: {
     login() {
-        axios.post('http://localhost:8080/login', {
-            email: this.email,
-            password: this.password
-        }, {
-            withCredentials: true // Include this option to send cookies with the request
-        })
-        .then(response => {
-            // Handle success response
-            console.log('Login response:', response);
+      axios.post('http://localhost:8080/login', {
+        email: this.email,
+        password: this.password
+      }, {
+        withCredentials: true // Include this option to send cookies with the request
+      })
+      .then(response => {
+        // Handle success response
+        console.log('Login response:', response);
 
-            // Check if the response contains expected data
-            if (response && response.data && response.data.username) {
-                // Login successful, handle the response as needed
-                console.log('Login successful:', response.data);
+        // Check if the response contains expected data
+        if (response && response.data && response.data.username && response.data.userId) {
+          // Login successful, handle the response as needed
+          console.log('Login successful:', response.data);
 
-                // Store the session cookie in localStorage
-                // document.cookie = response.headers['set-cookie'];
+          // Store user email, username, and userId in localStorage
+          localStorage.setItem('email', this.email);
+          localStorage.setItem('username', response.data.username);
+          localStorage.setItem('userId', response.data.userId);
 
-                // Store user email and username in localStorage (optional)
-                localStorage.setItem('email', this.email);
-                localStorage.setItem('username', response.data.username);
+          // Set isLoggedIn flag to true (optional)
+          localStorage.setItem('isLoggedIn', 'true');
 
-                // Set isLoggedIn flag to true (optional)
-                localStorage.setItem('isLoggedIn', 'true');
+          // Redirect to home page (assuming you are using Vue Router)
+          window.location.href = "#/";
 
-                // Redirect to home page (assuming you are using Vue Router)
-                window.location.href="#/home"
+          // Display success message to the user (optional)
+          window.alert('Login successful!');
+          window.location.reload();
+        } else {
+          // Unexpected response format, handle accordingly
+          console.error('Unexpected response format:', response);
+          window.alert('Login failed! Unexpected response format.');
+        }
+      })
+      .catch(error => {
+        // Handle errors
+        console.error('Login error:', error);
 
-                // Display success message to the user (optional)
-                window.alert('Login successful!');
-                window.location.reload()
-            } else {
-                // Unexpected response format, handle accordingly
-                console.error('Unexpected response format:', response);
-                window.alert('Login failed! Unexpected response format.');
-            }
-        })
-        .catch(error => {
-            // Handle errors
-            console.error('Login error:', error);
-
-            // Display error message to the user or handle it in your UI (optional)
-            window.alert('Login failed! Try again!');
-        });
+        // Display error message to the user or handle it in your UI (optional)
+        window.alert('Login failed! Try again!');
+      });
     }
-}
+  }
 };
+
+
 </script>
 
   

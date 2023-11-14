@@ -94,7 +94,7 @@ func main() {
 	// protectedRoutes.HandleFunc("/create", CreateShoe).Methods("POST")
 	// protectedRoutes.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
 	// protectedRoutes.HandleFunc("/delete/{id}", DeleteShoe).Methods("DELETE")
-	protectedRoutes.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
+	// protectedRoutes.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
 
 	//Public routes
 	r.HandleFunc("/update/{id}", UpdateShoe).Methods("PUT")
@@ -107,6 +107,7 @@ func main() {
 	r.HandleFunc("/forgot-password", forgotPasswordHandler).Methods("POST")
 	r.HandleFunc("/check-email", CheckEmailHandler).Methods("POST")
 	r.HandleFunc("/logout", logoutHandler).Methods("POST")
+	r.HandleFunc("/profile/{id}", ViewProfile).Methods("GET")
 
 	// Use the CORS-wrapped handler
 	http.Handle("/", handler)
@@ -149,11 +150,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Registration successful for username: %s, email: %s", user.Username, user.Email)
 }
 
+
 type LoginForm struct {
-	Username string `json:"username"`
-	Message  string `json:"message"`
-	Email    string `json: email`
-	Password string `json: password`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -168,9 +168,16 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var storedPasswordHash string
 	var username string
-	err = db.QueryRow("SELECT username, password FROM users WHERE email = ?", email).Scan(&username, &storedPasswordHash)
+	var userID int // Assuming UserID is of type int in the database
+
+	// Fetch username, password hash, and UserID from the database based on the email
+	err = db.QueryRow("SELECT id, username, password FROM users WHERE email = ?", email).Scan(&userID, &username, &storedPasswordHash)
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusUnauthorized)
+		} else {
+			http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		}
 		return
 	}
 
@@ -181,26 +188,31 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set a session cookie upon successful login
+	// Set a session cookie upon successful login (this example uses the email as the session value)
 	sessionCookie := http.Cookie{
 		Name:     "session",
-		Value:    email, // You can store user ID or other unique identifier here
-		HttpOnly: true,  // Cookie cannot be accessed via JavaScript
+		Value:    strconv.Itoa(userID), // Store the user ID in the session cookie
+		HttpOnly: true,                 // Cookie cannot be accessed via JavaScript
 	}
 	http.SetCookie(w, &sessionCookie)
 
+	// Prepare the response including the UserID, Username, and message
 	response := struct {
+		UserID   int    `json:"userId"`
 		Username string `json:"username"`
 		Message  string `json:"message"`
 	}{
+		UserID:   userID,
 		Username: username,
 		Message:  "Login successful",
 	}
 
+	// Send the JSON response including UserID, Username, and message
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
+
 
 // func forgotPasswordHandler(w http.ResponseWriter, r *http.Request) {
 // 	var user struct {

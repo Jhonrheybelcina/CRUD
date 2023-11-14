@@ -322,14 +322,6 @@ export default {
   // eslint-disable-next-line vue/multi-word-component-names
   name: 'Home',
   mounted() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
-    if (!isLoggedIn) {
-      // If the user is not logged in, show an alert, deny access, and redirect to the login page
-      alert('Access Denied. Please log in.');
-      window.location.href = '#/login'; // Assuming the login page path is '/login'
-    }
-
   },
   methods: {
 
