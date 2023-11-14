@@ -42,7 +42,7 @@
                     <input type="checkbox">
                     <label>Remember me </label>
                 </div>
-                <span class="span">Forgot password?</span>
+                <span class="span"><a  href="#/forgot-password">Forgot password?</a></span>
             </div>
             <button class="button-submit" type="submit">Sign In</button>
             <p class="p">Don't have an account? <span class="span"> <a class="link" href="#/register">Sign Up</a></span>

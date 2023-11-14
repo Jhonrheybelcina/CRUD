@@ -17,6 +17,7 @@ const routes = [
   { path: '/home', component: Home, meta: { requiresAuth: true } }, // Add meta field for authentication
   { path: '/profile', component: Profile, meta: { requiresAuth: true } },
   { path: '/shoe', component: Shoe, meta: { requiresAuth: true } },
+  { path: '/forgot-password', component: Shoe, meta: { requiresAuth: true } },
 ];
 
 const router = createRouter({

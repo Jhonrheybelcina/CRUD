@@ -10,6 +10,7 @@ import Landing from './components/pages/Landing.vue'
 import Profile from './components/pages/Profile.vue'
 import Shoe from './components/pages/Shoe.vue'
 import Footer from './components/footer/Footer.vue'
+import Forgotpassword from './components/pages/Forgotpassword.vue'
 
 const routes = {
   '/': Landing,
@@ -19,7 +20,8 @@ const routes = {
   '/contact': Contact,
   '/home': Home,
   '/profile': Profile,
-  '/shoe': Shoe
+  '/shoe': Shoe,
+  '/forgot-password': Forgotpassword
 }
 let currentRoute = window.location.pathname;
 // eslint-disable-next-line no-empty
