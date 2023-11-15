@@ -75,7 +75,6 @@ func main() {
 		AllowedOrigins: []string{
 			"http://localhost:3000",
 			"https://teal-malasada-553c48.netlify.app",
-			"https://jhonrheybelcina.github.io",
 		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization"},
